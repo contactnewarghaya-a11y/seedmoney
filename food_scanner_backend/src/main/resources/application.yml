@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: food-scanner-backend
+  data:
+    mongodb:
+      # Set MONGODB_URI in Render.com Environment Variables
+      uri: ${MONGODB_URI}
+      database: food_scanner
+
+server:
+  port: 8080
+
+openrouter:
+  # Set OPENROUTER_API_KEY in Render.com Environment Variables
+  api-key: ${OPENROUTER_API_KEY}
+  url: "https://openrouter.ai/api/v1/chat/completions"
+  model: "z-ai/glm-4.5-air:free"
+
+logging:
+  level:
+    org.springframework.data.mongodb.core.MongoTemplate: DEBUG

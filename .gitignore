@@ -1,0 +1,41 @@
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+*.g.dart
+
+# Android
+food_scanner_ai/android/.gradle/
+food_scanner_ai/android/captures/
+food_scanner_ai/android/gradlew
+food_scanner_ai/android/gradlew.bat
+food_scanner_ai/android/local.properties
+food_scanner_ai/android/**/GeneratedPluginRegistrant.java
+
+# iOS
+food_scanner_ai/ios/Pods/
+food_scanner_ai/ios/.symlinks/
+food_scanner_ai/ios/Flutter/flutter_export_environment.sh
+food_scanner_ai/ios/Flutter/Generated.xcconfig
+
+# Spring Boot / Maven
+food_scanner_backend/target/
+food_scanner_backend/maven.zip
+food_scanner_backend/apache-maven-3.9.6/
+
+# Python
+food_scanner_ocr/__pycache__/
+food_scanner_ocr/*.pyc
+food_scanner_ocr/*.pyo
+food_scanner_ocr/.env
+
+# IDE / OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
