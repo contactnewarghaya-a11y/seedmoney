@@ -1,23 +1,23 @@
 import 'package:dio/dio.dart';
 
 class ScannerApi {
-  // Use actual IP for physical device testing
+  // Live Cloud Backend on Render.com
   final Dio dio = Dio(
     BaseOptions(
-      baseUrl: 'http://10.0.2.18:8080/api', 
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 5),
+      baseUrl: 'https://seedmoney-7z7x.onrender.com/api', 
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
     ),
   );
 
-  /// Phase 7: Fast API EasyOCR Engine
+  /// Phase 7: Fast API EasyOCR Engine (Hugging Face Spaces)
   Future<Map<String, dynamic>> extractText(String base64Image) async {
     try {
-      // Hit the Python FastAPI Microservice!
+      // Hit the Hugging Face Python OCR Microservice!
       final ocrDio = Dio(BaseOptions(
-        baseUrl: 'http://10.0.2.18:8000', 
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
+        baseUrl: 'https://arghyadevdas-food-scanner-ocr.hf.space', 
+        connectTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(seconds: 60),
       ));
 
       final response = await ocrDio.post('/ocr/extract', data: {"image": base64Image});

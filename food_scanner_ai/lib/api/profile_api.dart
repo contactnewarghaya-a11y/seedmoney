@@ -2,12 +2,12 @@ import 'package:dio/dio.dart';
 import '../models/user_profile.dart';
 
 class ProfileApi {
-  // Use actual IP for physical device testing
+  // Live Cloud Backend on Render.com
   final Dio dio = Dio(
     BaseOptions(
-      baseUrl: 'http://10.0.2.18:8080/api', 
-      connectTimeout: const Duration(seconds: 5),
-      receiveTimeout: const Duration(seconds: 5),
+      baseUrl: 'https://seedmoney-7z7x.onrender.com/api', 
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
     ),
   );
 
