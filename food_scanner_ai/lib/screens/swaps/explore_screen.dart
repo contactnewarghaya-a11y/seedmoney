@@ -192,7 +192,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             title: 'E-Numbers',
                             subtitle: 'International safety codes for food additives.',
                             tagText: '500+ Items',
-                            imageUrl: 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&q=80&w=600',
+                            imageUrl: 'https://picsum.photos/seed/chemistry/600/140',
                             onTap: () {
                               _searchController.text = 'E-NUMBER';
                               setState(() => _searchQuery = 'E-NUMBER');
@@ -204,7 +204,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             title: 'Natural Colors',
                             subtitle: 'Pigments extracted from fruits, vegetables, and minerals.',
                             tagText: 'Plant Derived',
-                            imageUrl: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&q=80&w=600',
+                            imageUrl: 'https://picsum.photos/seed/nature/600/140',
                             onTap: () {
                               _searchController.text = 'NATURAL';
                               setState(() => _searchQuery = 'NATURAL');
@@ -216,7 +216,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             title: 'Preservatives',
                             subtitle: 'Common agents used to inhibit microbial growth.',
                             tagText: 'Shelf Life',
-                            imageUrl: 'https://images.unsplash.com/photo-1615486511484-92e172e270b2?auto=format&fit=crop&q=80&w=600',
+                            imageUrl: 'https://picsum.photos/seed/preserve/600/140',
                             isTagGrey: true,
                             onTap: () {
                               _searchController.text = 'PRESERVATIVE';
@@ -350,34 +350,59 @@ class _CategoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        height: 140,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          image: DecorationImage(
-            image: NetworkImage(imageUrl),
-            fit: BoxFit.cover,
-            colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.5), BlendMode.darken),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          height: 140,
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor, // Fallback color if image fails
+            borderRadius: BorderRadius.circular(16),
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.end,
+          child: Stack(
+            fit: StackFit.expand,
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isTagGrey ? Colors.grey.shade600.withValues(alpha: 0.8) : AppTheme.primaryColor.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(4),
+              // Background image with error fallback
+              Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                color: Colors.black.withValues(alpha: 0.5),
+                colorBlendMode: BlendMode.darken,
+                errorBuilder: (_, __, ___) => Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isTagGrey
+                          ? [Colors.grey.shade700, Colors.grey.shade500]
+                          : [AppTheme.primaryColor, AppTheme.primaryLight],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
                 ),
-                child: Text(tagText, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
               ),
-              const SizedBox(height: 8),
-              Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-              const SizedBox(height: 4),
-              Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
+              // Content overlay
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isTagGrey
+                            ? Colors.grey.shade600.withValues(alpha: 0.8)
+                            : AppTheme.primaryColor.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(tagText, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 4),
+                    Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
+                  ],
+                ),
+              ),
             ],
           ),
         ),
