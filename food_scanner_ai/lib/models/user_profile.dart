@@ -1,4 +1,9 @@
 class UserProfile {
+  final String fullName;
+  final String email;
+  final String? avatarUrl;
+  final bool isPro;
+  final String joinDate;
   final List<String> allergens;
   final List<String> conditions;
   final List<String> dietaryPreferences;
@@ -6,6 +11,11 @@ class UserProfile {
   final int totalScans;
 
   UserProfile({
+    this.fullName = 'Arjun Sharma',
+    this.email = 'arjun.sharma@example.com',
+    this.avatarUrl,
+    this.isPro = true,
+    this.joinDate = 'May 2023',
     required this.allergens,
     required this.conditions,
     required this.dietaryPreferences,
@@ -24,6 +34,11 @@ class UserProfile {
   }
 
   UserProfile copyWith({
+    String? fullName,
+    String? email,
+    String? avatarUrl,
+    bool? isPro,
+    String? joinDate,
     List<String>? allergens,
     List<String>? conditions,
     List<String>? dietaryPreferences,
@@ -31,6 +46,11 @@ class UserProfile {
     int? totalScans,
   }) {
     return UserProfile(
+      fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      isPro: isPro ?? this.isPro,
+      joinDate: joinDate ?? this.joinDate,
       allergens: allergens ?? this.allergens,
       conditions: conditions ?? this.conditions,
       dietaryPreferences: dietaryPreferences ?? this.dietaryPreferences,

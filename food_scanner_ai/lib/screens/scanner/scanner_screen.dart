@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../providers/scan_provider.dart';
+import '../../core/theme/app_theme.dart';
+import '../../services/image_service.dart';
 
 class ScannerScreen extends StatefulWidget {
   const ScannerScreen({super.key});
@@ -14,7 +16,6 @@ class ScannerScreen extends StatefulWidget {
 
 class _ScannerScreenState extends State<ScannerScreen> {
   CameraController? _controller;
-  List<CameraDescription> _cameras = [];
   bool _isCameraInitialized = false;
   bool _isFlashOn = false;
 
@@ -26,23 +27,14 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
   Future<void> _initCamera() async {
     try {
-      _cameras = await availableCameras();
-      if (_cameras.isNotEmpty) {
-        _controller = CameraController(
-          _cameras.first, // Usually the back camera
-          ResolutionPreset.max, // Max resolution is required for small ingredient text
-          enableAudio: false,
-        );
-
+      final cameras = await availableCameras();
+      if (cameras.isNotEmpty) {
+        _controller = CameraController(cameras.first, ResolutionPreset.max, enableAudio: false);
         await _controller!.initialize();
-        if (mounted) {
-          setState(() {
-            _isCameraInitialized = true;
-          });
-        }
+        if (mounted) setState(() => _isCameraInitialized = true);
       }
     } catch (e) {
-      debugPrint("Error initializing camera: $e");
+      debugPrint("Camera init error: $e");
     }
   }
 
@@ -54,169 +46,274 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
   Future<void> _toggleFlash() async {
     if (_controller == null || !_controller!.value.isInitialized) return;
-    
     try {
-      if (_isFlashOn) {
-        await _controller!.setFlashMode(FlashMode.off);
-      } else {
-        await _controller!.setFlashMode(FlashMode.torch);
-      }
-      setState(() {
-        _isFlashOn = !_isFlashOn;
-      });
-    } catch (e) {
-      debugPrint("Error toggling flash: $e");
-    }
+      _isFlashOn = !_isFlashOn;
+      await _controller!.setFlashMode(_isFlashOn ? FlashMode.torch : FlashMode.off);
+      setState(() {});
+    } catch (_) {}
   }
 
   Future<void> _captureImage() async {
-    if (_controller == null || !_controller!.value.isInitialized) return;
-    if (_controller!.value.isTakingPicture) return;
-
+    if (_controller == null || !_controller!.value.isInitialized || _controller!.value.isTakingPicture) return;
     try {
       final XFile image = await _controller!.takePicture();
-      
       if (!mounted) return;
-      
-      final scanProvider = context.read<ScanProvider>();
-      final success = await scanProvider.processImage(image.path);
-
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Image captured and compressed (Ready for API)')),
-        );
-        // Turn off flash if it was on
-        if (_isFlashOn) {
-          await _controller!.setFlashMode(FlashMode.off);
-        }
-        if (!mounted) return;
-        // Navigate to the Result screen
-        context.go('/result');
-      }
+      final success = await context.read<ScanProvider>().processImage(image.path);
+      if (success && mounted) context.go('/result');
     } catch (e) {
-      debugPrint("Error capturing image: $e");
+      debugPrint("Capture error: $e");
+    }
+  }
+
+  Future<void> _pickFromGallery() async {
+    final imageService = ImageService();
+    final image = await imageService.pickImageFromGallery();
+    if (image != null && mounted) {
+      final success = await context.read<ScanProvider>().processImage(image.path);
+      if (success && mounted) context.go('/result');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (!_isCameraInitialized || _controller == null) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
     final isProcessing = context.watch<ScanProvider>().isProcessing;
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Camera Preview
+      body: Stack(
+        children: [
+          // Camera preview
+          if (_isCameraInitialized && _controller != null)
             Positioned.fill(
-              child: AspectRatio(
-                aspectRatio: _controller!.value.aspectRatio,
-                child: CameraPreview(_controller!),
-              ),
-            ),
-            
-            // Top UI Bar
-            Positioned(
-              top: 16,
-              left: 16,
-              right: 16,
+              child: CameraPreview(_controller!),
+            )
+          else
+            const Center(child: CircularProgressIndicator(color: Colors.white)),
+
+          // Top App Bar
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back, color: Colors.white, size: 30),
-                    onPressed: () => context.go('/dashboard'),
-                  ),
-                  IconButton(
-                    icon: Icon(
-                      _isFlashOn ? Icons.flash_on : Icons.flash_off,
-                      color: Colors.white,
-                      size: 30,
-                    ),
-                    onPressed: _toggleFlash,
-                  ),
-                ],
-              ),
-            ),
-
-            // Targeting Overlay (Animated Viewfinder)
-            Center(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
+                  // Logo area
                   Container(
-                    width: 300,
-                    height: 200,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.greenAccent, width: 3),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.greenAccent.withValues(alpha: 0.3),
-                          blurRadius: 20,
-                          spreadRadius: 5,
-                        )
-                      ]
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(50),
                     ),
-                  ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-                   .fadeIn(duration: 1.seconds)
-                   .boxShadow(begin: const BoxShadow(blurRadius: 0), end: const BoxShadow(blurRadius: 30, color: Colors.greenAccent)),
-                  
-                  // Scanning text
-                  Positioned(
-                    bottom: -30,
-                    child: const Text(
-                      "Align Ingredients Here",
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                    ).animate().fadeIn().slideY(begin: 0.5),
-                  )
+                    child: Text(
+                      'NutriScan',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 17,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(50)),
+                    child: IconButton(
+                      icon: const Icon(Icons.settings_outlined, color: Colors.black87),
+                      onPressed: () {},
+                    ),
+                  ),
                 ],
               ),
             ),
+          ),
 
-            // Bottom UI Bar (Capture Button)
-            Positioned(
-              bottom: 40,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: isProcessing 
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : GestureDetector(
-                        onTap: _captureImage,
-                        child: Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 4),
-                            color: Colors.white.withValues(alpha: 0.3),
-                          ),
-                          child: Center(
-                            child: Container(
-                              width: 60,
-                              height: 60,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
+          // Viewfinder with corner brackets
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Frosted background for viewfinder
+                    Container(
+                      width: 290,
+                      height: 210,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(16),
                       ),
-              ),
+                    ),
+                    // Corner brackets
+                    SizedBox(
+                      width: 290,
+                      height: 210,
+                      child: CustomPaint(painter: _CornerBracketPainter()),
+                    ),
+                    // Center icon + text
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.barcode_reader, color: Colors.white.withValues(alpha: 0.7), size: 40),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'Align Ingredient Label',
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
+                        ),
+                      ],
+                    ),
+                  ],
+                ).animate(onPlay: (c) => c.repeat(reverse: true)).custom(
+                  duration: 2.seconds,
+                  builder: (_, val, child) => Opacity(opacity: 0.7 + val * 0.3, child: child),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Flash and Gallery inline buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _CamActionBtn(
+                      icon: _isFlashOn ? Icons.flash_on : Icons.flash_off,
+                      onTap: _toggleFlash,
+                    ),
+                    const SizedBox(width: 20),
+                    _CamActionBtn(
+                      icon: Icons.image_outlined,
+                      onTap: _pickFromGallery,
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+
+          // Hint card
+          Positioned(
+            bottom: 180,
+            left: 24,
+            right: 24,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 20)],
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: AppTheme.primaryColor, size: 20),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'Align the ingredient list within the frame for best results.',
+                      style: TextStyle(fontSize: 13, color: Colors.black87, fontWeight: FontWeight.w500),
+                    ),
+                  ),
+                ],
+              ),
+            ).animate().slideY(begin: 0.2).fadeIn(delay: 300.ms),
+          ),
+
+          // Capture button + label
+          Positioned(
+            bottom: 60,
+            left: 0,
+            right: 0,
+            child: Column(
+              children: [
+                GestureDetector(
+                  onTap: isProcessing ? null : _captureImage,
+                  child: Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.2),
+                      border: Border.all(color: Colors.white, width: 3),
+                    ),
+                    child: Center(
+                      child: isProcessing
+                          ? const CircularProgressIndicator(color: Colors.white, strokeWidth: 3)
+                          : Container(
+                              width: 58,
+                              height: 58,
+                              decoration: BoxDecoration(shape: BoxShape.circle, color: AppTheme.primaryColor),
+                              child: const Icon(Icons.document_scanner_outlined, color: Colors.white, size: 28),
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'SCAN LABEL',
+                  style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.5),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
+}
+
+class _CamActionBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _CamActionBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.15),
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.5),
+        ),
+        child: Icon(icon, color: Colors.white, size: 22),
+      ),
+    );
+  }
+}
+
+// Custom painter for corner bracket viewfinder
+class _CornerBracketPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF4CAF50)
+      ..strokeWidth = 4
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+
+    const len = 28.0;
+    const r = 12.0;
+
+    // Top-left
+    canvas.drawLine(Offset(r, 0), Offset(r + len, 0), paint);
+    canvas.drawLine(Offset(0, r), Offset(0, r + len), paint);
+    canvas.drawArc(const Rect.fromLTWH(0, 0, r * 2, r * 2), 3.14159, 3.14159 / 2, false, paint);
+
+    // Top-right
+    canvas.drawLine(Offset(size.width - r, 0), Offset(size.width - r - len, 0), paint);
+    canvas.drawLine(Offset(size.width, r), Offset(size.width, r + len), paint);
+    canvas.drawArc(Rect.fromLTWH(size.width - r * 2, 0, r * 2, r * 2), 3.14159 * 1.5, 3.14159 / 2, false, paint);
+
+    // Bottom-left
+    canvas.drawLine(Offset(r, size.height), Offset(r + len, size.height), paint);
+    canvas.drawLine(Offset(0, size.height - r), Offset(0, size.height - r - len), paint);
+    canvas.drawArc(Rect.fromLTWH(0, size.height - r * 2, r * 2, r * 2), 3.14159 / 2, 3.14159 / 2, false, paint);
+
+    // Bottom-right
+    canvas.drawLine(Offset(size.width - r, size.height), Offset(size.width - r - len, size.height), paint);
+    canvas.drawLine(Offset(size.width, size.height - r), Offset(size.width, size.height - r - len), paint);
+    canvas.drawArc(Rect.fromLTWH(size.width - r * 2, size.height - r * 2, r * 2, r * 2), 0, 3.14159 / 2, false, paint);
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
 }

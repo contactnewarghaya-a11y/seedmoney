@@ -6,6 +6,8 @@ import 'providers/auth_provider.dart';
 import 'providers/scan_provider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/history_provider.dart';
+import 'providers/explore_provider.dart';
+import 'providers/alert_provider.dart';
 
 void main() {
   runApp(
@@ -15,6 +17,8 @@ void main() {
         ChangeNotifierProvider(create: (_) => ScanProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(create: (_) => HistoryProvider()),
+        ChangeNotifierProvider(create: (_) => ExploreProvider()),
+        ChangeNotifierProvider(create: (_) => AlertProvider()),
       ],
       child: const MyApp(),
     ),

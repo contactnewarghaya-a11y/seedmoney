@@ -24,6 +24,11 @@ class HistoryProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void clearHistory() {
+    _history.clear();
+    notifyListeners();
+  }
+
   void toggleFavorite(String id) {
     final index = _history.indexWhere((item) => item.id == id);
     if (index != -1) {

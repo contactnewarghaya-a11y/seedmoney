@@ -1,303 +1,359 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/scan_provider.dart';
-import '../../providers/profile_provider.dart';
-import '../../services/image_service.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
+import '../../providers/history_provider.dart';
+import '../../providers/profile_provider.dart';
+import '../../models/scan_history.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 200.0,
-            floating: false,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              title: const Text('NutriScan', style: TextStyle(fontWeight: FontWeight.bold)),
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+      backgroundColor: AppTheme.backgroundLight,
+      body: SafeArea(
+        child: Consumer2<HistoryProvider, ProfileProvider>(
+          builder: (context, historyProv, profileProv, child) {
+            final profile = profileProv.profile;
+            
+            // Filter history
+            List<ScanHistoryItem> filteredHistory = historyProv.history;
+            if (_searchQuery.isNotEmpty) {
+              filteredHistory = filteredHistory.where((item) {
+                final ingredients = item.result.ingredients.join(' ').toLowerCase();
+                return ingredients.contains(_searchQuery.toLowerCase());
+              }).toList();
+            }
+
+            // Group by Today / Yesterday / Older
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            final yesterday = today.subtract(const Duration(days: 1));
+
+            List<ScanHistoryItem> todayItems = [];
+            List<ScanHistoryItem> yesterdayItems = [];
+            List<ScanHistoryItem> olderItems = [];
+
+            for (var item in filteredHistory) {
+              final itemDate = DateTime(item.createdAt.year, item.createdAt.month, item.createdAt.day);
+              if (itemDate == today) {
+                todayItems.add(item);
+              } else if (itemDate == yesterday) {
+                yesterdayItems.add(item);
+              } else {
+                olderItems.add(item);
+              }
+            }
+
+            return CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 18,
+                          backgroundImage: profile.avatarUrl != null ? NetworkImage(profile.avatarUrl!) : const NetworkImage('https://i.pravatar.cc/150?img=11'),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Hi, ${profile.fullName.split(' ').first}',
+                          style: const TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 22,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.notifications_none_rounded, color: AppTheme.textDark),
+                          onPressed: () => context.push('/alerts'),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: _searchController,
+                          onChanged: (val) {
+                            setState(() {
+                              _searchQuery = val;
+                            });
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'Search product history...',
+                            hintStyle: TextStyle(color: AppTheme.textMuted, fontSize: 15),
+                            prefixIcon: const Icon(Icons.search, color: AppTheme.textMuted),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        if (historyProv.history.isNotEmpty)
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                historyProv.clearHistory();
+                              },
+                              icon: const Icon(Icons.delete_outline, size: 20),
+                              label: const Text('Clear History'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: AppTheme.primaryColor,
+                                side: BorderSide(color: Colors.grey.shade300),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                backgroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+                if (filteredHistory.isEmpty)
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.history, size: 64, color: Colors.grey.shade300),
+                          const SizedBox(height: 16),
+                          Text('No scan history found', style: TextStyle(color: AppTheme.textMuted, fontSize: 16)),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final List<Widget> children = [];
+                          if (todayItems.isNotEmpty && index == 0) {
+                            children.add(const Padding(
+                              padding: EdgeInsets.only(bottom: 12),
+                              child: Text('TODAY', style: TextStyle(color: AppTheme.textMuted, fontSize: 13, letterSpacing: 1.2)),
+                            ));
+                            children.addAll(todayItems.map((item) => _HistoryCard(item: item)));
+                            children.add(const SizedBox(height: 12));
+                          }
+                          
+                          if (yesterdayItems.isNotEmpty && index == (todayItems.isNotEmpty ? 1 : 0)) {
+                            children.add(const Padding(
+                              padding: EdgeInsets.only(bottom: 12),
+                              child: Text('YESTERDAY', style: TextStyle(color: AppTheme.textMuted, fontSize: 13, letterSpacing: 1.2)),
+                            ));
+                            children.addAll(yesterdayItems.map((item) => _HistoryCard(item: item)));
+                            children.add(const SizedBox(height: 12));
+                          }
+                          
+                          if (olderItems.isNotEmpty && index == (todayItems.isNotEmpty ? 1 : 0) + (yesterdayItems.isNotEmpty ? 1 : 0)) {
+                            children.add(const Padding(
+                              padding: EdgeInsets.only(bottom: 12),
+                              child: Text('OLDER', style: TextStyle(color: AppTheme.textMuted, fontSize: 13, letterSpacing: 1.2)),
+                            ));
+                            children.addAll(olderItems.map((item) => _HistoryCard(item: item)));
+                          }
+
+                          if (index == (todayItems.isNotEmpty ? 1 : 0) + (yesterdayItems.isNotEmpty ? 1 : 0) + (olderItems.isNotEmpty ? 1 : 0)) {
+                            return const SizedBox(height: 80); // Bottom padding for FAB
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: children,
+                          );
+                        },
+                        childCount: (todayItems.isNotEmpty ? 1 : 0) + (yesterdayItems.isNotEmpty ? 1 : 0) + (olderItems.isNotEmpty ? 1 : 0) + 1,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.go('/scanner'),
+        backgroundColor: AppTheme.primaryColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Icon(Icons.qr_code_scanner, color: Colors.white),
+      ),
+    );
+  }
+}
+
+class _HistoryCard extends StatelessWidget {
+  final ScanHistoryItem item;
+
+  const _HistoryCard({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    bool isSafe = item.result.riskLevel.toLowerCase() == 'safe';
+    bool isWarning = item.result.riskLevel.toLowerCase() == 'moderate';
+    String status = item.result.riskLevel;
+    
+    if (item.result.dangerous.isNotEmpty) {
+      status = 'Allergen Detected';
+      isSafe = false;
+      isWarning = false;
+    } else if (status.toLowerCase() == 'high') {
+      isSafe = false;
+      isWarning = false;
+    }
+
+    Color chipBgColor = isSafe ? AppTheme.primaryLightest : (isWarning ? Colors.grey.shade400 : AppTheme.dangerLight);
+    Color chipTextColor = isSafe ? AppTheme.primaryColor : (isWarning ? Colors.black87 : AppTheme.dangerRed);
+    IconData chipIcon = isSafe ? Icons.check_circle_outline : (isWarning ? Icons.error_outline : Icons.warning_amber_rounded);
+
+    // Format time
+    String timeStr = '${item.createdAt.hour.toString().padLeft(2, '0')}:${item.createdAt.minute.toString().padLeft(2, '0')}';
+    
+    // Attempt to parse ingredients for a title
+    String title = 'Scanned Product';
+    if (item.result.ingredients.isNotEmpty) {
+      title = item.result.ingredients.first;
+      if (title.length > 20) title = '${title.substring(0, 20)}...';
+    }
+
+    Widget imageWidget;
+    if (item.result.rawImageBase64.isNotEmpty) {
+      try {
+        imageWidget = Image.memory(
+          base64Decode(item.result.rawImageBase64),
+          width: 72,
+          height: 72,
+          fit: BoxFit.cover,
+        );
+      } catch (e) {
+        imageWidget = _placeholderImage();
+      }
+    } else {
+      imageWidget = _placeholderImage();
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: imageWidget,
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textDark,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Scanned at $timeStr',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.textMuted,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: chipBgColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.spa, color: Colors.white, size: 60)
-                          .animate()
-                          .scale(duration: 500.ms, curve: Curves.easeOutBack)
-                          .fadeIn(),
-                      const SizedBox(height: 8),
-                      const Text(
-                        "Your Personal Food Guardian",
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
-                      ).animate().fadeIn(delay: 300.ms),
+                      Icon(chipIcon, size: 14, color: chipTextColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        status,
+                        style: TextStyle(
+                          color: chipTextColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.logout, color: Colors.white),
-                onPressed: () {
-                  context.read<AuthProvider>().logout();
-                  context.go('/login');
-                },
-              )
-            ],
-          ),
-        SliverPadding(
-            padding: const EdgeInsets.all(24.0),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                // Stats Dashboard Widget
-                Consumer<ProfileProvider>(
-                  builder: (context, profileProvider, child) {
-                    final profile = profileProvider.profile;
-                    return Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          )
-                        ],
-                        border: Border.all(color: Colors.grey.shade100),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _StatColumn(
-                            title: "Scans",
-                            value: "${profile.totalScans}",
-                            icon: Icons.document_scanner,
-                            color: Colors.blue,
-                          ).animate().scale(delay: 400.ms),
-                          Container(width: 1, height: 40, color: Colors.grey.shade200),
-                          _StatColumn(
-                            title: "Points",
-                            value: "${profile.rewardPoints}",
-                            icon: Icons.stars_rounded,
-                            color: Colors.amber.shade600,
-                          ).animate().scale(delay: 500.ms),
-                        ],
-                      ),
-                    ).animate().slideY(begin: 0.2).fadeIn(delay: 200.ms);
-                  },
-                ),
-                const SizedBox(height: 32),
-
-                Text(
-                  'What would you like to do today?',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                ).animate().slideX(begin: -0.1).fadeIn(delay: 600.ms),
-                const SizedBox(height: 24),
-                
-                // Cards Grid
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                  childAspectRatio: 0.9,
-                  children: [
-                    _DashboardCard(
-                      title: 'Scan Food',
-                      subtitle: 'Use Camera',
-                      icon: Icons.camera_alt_rounded,
-                      color: Colors.blue.shade400,
-                      onTap: () => context.go('/scanner'),
-                    ).animate().scale(delay: 100.ms, duration: 400.ms, curve: Curves.easeOut),
-                    
-                    _DashboardCard(
-                      title: 'Upload',
-                      subtitle: 'From Gallery',
-                      icon: Icons.image_rounded,
-                      color: Colors.green.shade400,
-                      onTap: () async {
-                        final imageService = ImageService();
-                        final image = await imageService.pickImageFromGallery();
-                        if (image != null && context.mounted) {
-                          showDialog(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (_) => const Center(child: CircularProgressIndicator(color: AppTheme.primaryColor)),
-                          );
-                          final success = await context.read<ScanProvider>().processImage(image.path);
-                          if (context.mounted) {
-                             Navigator.of(context).pop(); 
-                             if (success) {
-                               context.go('/result');
-                             } else {
-                               ScaffoldMessenger.of(context).showSnackBar(
-                                 const SnackBar(content: Text('Failed to process image.')),
-                               );
-                             }
-                          }
-                        }
-                      },
-                    ).animate().scale(delay: 200.ms, duration: 400.ms, curve: Curves.easeOut),
-
-                    _DashboardCard(
-                      title: 'History',
-                      subtitle: 'Past Scans',
-                      icon: Icons.history_rounded,
-                      color: Colors.orange.shade400,
-                      onTap: () => context.go('/history'),
-                    ).animate().scale(delay: 300.ms, duration: 400.ms, curve: Curves.easeOut),
-
-                    _DashboardCard(
-                      title: 'Profile',
-                      subtitle: 'Health Settings',
-                      icon: Icons.person_rounded,
-                      color: Colors.purple.shade400,
-                      onTap: () => context.go('/profile'),
-                    ).animate().scale(delay: 400.ms, duration: 400.ms, curve: Curves.easeOut),
-                  ],
-                ),
-              ]),
+              ],
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class _DashboardCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _DashboardCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 8,
-      shadowColor: color.withValues(alpha: 0.3),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                color.withValues(alpha: 0.8),
-                color,
-              ],
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Icon(icon, size: 32, color: Colors.white),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontWeight: FontWeight.w500,
-                          ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
+  Widget _placeholderImage() {
+    return Image.network(
+      'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=200',
+      width: 72,
+      height: 72,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => Container(
+        width: 72,
+        height: 72,
+        color: Colors.grey.shade200,
+        child: const Icon(Icons.image_not_supported, color: Colors.grey),
       ),
-    );
-  }
-}
-
-class _StatColumn extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _StatColumn({
-    required this.title,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 28),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.black87,
-          ),
-        ),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey.shade600,
-          ),
-        ),
-      ],
     );
   }
 }

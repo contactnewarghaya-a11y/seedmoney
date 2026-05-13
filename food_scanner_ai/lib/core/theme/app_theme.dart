@@ -2,10 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Vibrant Emerald Green
-  static const Color primaryColor = Color(0xFF059669); 
-  static const Color secondaryColor = Color(0xFF10B981);
-  static const Color backgroundLight = Color(0xFFF9FAFB);
+  static const Color primaryColor   = Color(0xFF006B3D); // Matching the deep green
+  static const Color primaryLight   = Color(0xFF2D8A50);
+  static const Color primaryLightest = Color(0xFFA6E5C0); // For pill background
+  static const Color accentGreen    = Color(0xFF4CAF50);
+  static const Color backgroundLight = Color(0xFFF9FAFA); // Very light gray/white
+  static const Color cardColor      = Colors.white;
+  static const Color dangerRed      = Color(0xFFD32F2F);
+  static const Color dangerLight    = Color(0xFFFFCDD2);
+  static const Color warningOrange  = Color(0xFFF57C00);
+  static const Color warningLight   = Color(0xFFFFE0B2);
+  static const Color textDark       = Color(0xFF1A1A2E);
+  static const Color textMuted      = Color(0xFF6B7280);
 
   static ThemeData get lightTheme {
     return ThemeData(
@@ -14,55 +22,54 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryColor,
         primary: primaryColor,
-        secondary: secondaryColor,
+        secondary: accentGreen,
         brightness: Brightness.light,
+        surface: cardColor,
       ),
       textTheme: GoogleFonts.outfitTextTheme(),
       appBarTheme: AppBarTheme(
-        centerTitle: true,
+        centerTitle: false,
         elevation: 0,
-        backgroundColor: backgroundLight,
+        backgroundColor: Colors.white,
         surfaceTintColor: Colors.transparent,
-        iconTheme: const IconThemeData(color: Colors.black87),
+        iconTheme: const IconThemeData(color: Color(0xFF1A1A2E)),
         titleTextStyle: GoogleFonts.outfit(
-          color: Colors.black87,
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
+          color: const Color(0xFF1E6B3C),
+          fontSize: 22,
+          fontWeight: FontWeight.w800,
         ),
       ),
       cardTheme: const CardThemeData(
-        elevation: 4,
+        elevation: 0,
+        color: cardColor,
         shadowColor: Colors.black12,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(20))),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(16)),
+        ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
           backgroundColor: primaryColor,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          textStyle: GoogleFonts.outfit(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          textStyle: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.grey.shade200),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide(color: Colors.grey.shade200),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: primaryColor, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -78,10 +85,6 @@ class AppTheme {
         brightness: Brightness.dark,
       ),
       textTheme: GoogleFonts.outfitTextTheme(ThemeData.dark().textTheme),
-      appBarTheme: const AppBarTheme(
-        centerTitle: true,
-        elevation: 0,
-      ),
     );
   }
 }

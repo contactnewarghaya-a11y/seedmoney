@@ -1,92 +1,628 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../../core/theme/app_theme.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/auth_provider.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
-  final List<String> _commonAllergens = const [
-    'Peanut', 'Tree Nuts', 'Milk', 'Eggs', 'Wheat', 'Soy', 'Fish', 'Shellfish'
-  ];
-
-  final List<String> _commonConditions = const [
-    'Diabetes', 'Hypertension', 'Lactose Intolerance', 'Celiac Disease'
-  ];
-
-  final List<String> _dietaryPrefs = const [
-    'Vegan', 'Vegetarian', 'Keto', 'Paleo'
-  ];
-
   @override
-  Widget build(BuildContext context) {
-    final provider = context.watch<ProfileProvider>();
-    final profile = provider.profile;
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
 
-    if (provider.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Health Profile'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/dashboard'),
-        ),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSectionHeader(context, 'Food Allergies'),
-              ..._commonAllergens.map((allergen) {
-                return SwitchListTile(
-                  title: Text(allergen),
-                  value: profile.allergens.contains(allergen),
-                  onChanged: (val) => provider.toggleAllergen(allergen, val),
-                  activeThumbColor: Colors.red.shade400,
-                );
-              }),
-              const Divider(),
-
-              _buildSectionHeader(context, 'Health Conditions'),
-              ..._commonConditions.map((condition) {
-                return SwitchListTile(
-                  title: Text(condition),
-                  value: profile.conditions.contains(condition),
-                  onChanged: (val) => provider.toggleCondition(condition, val),
-                  activeThumbColor: Colors.orange.shade400,
-                );
-              }),
-              const Divider(),
-
-              _buildSectionHeader(context, 'Dietary Preferences'),
-              ..._dietaryPrefs.map((pref) {
-                return SwitchListTile(
-                  title: Text(pref),
-                  value: profile.dietaryPreferences.contains(pref),
-                  onChanged: (val) => provider.toggleDietary(pref, val),
-                  activeThumbColor: Colors.green.shade400,
-                );
-              }),
-            ],
+class _ProfileScreenState extends State<ProfileScreen> {
+  void _showAddAllergenDialog(BuildContext context, ProfileProvider prov) {
+    final tc = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add Allergen'),
+        content: TextField(
+          controller: tc,
+          decoration: const InputDecoration(
+            hintText: 'e.g. Peanuts, Gluten',
+            border: OutlineInputBorder(),
           ),
+          autofocus: true,
         ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (tc.text.trim().isNotEmpty) {
+                prov.toggleAllergen(tc.text.trim(), true);
+                Navigator.pop(ctx);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+            child: const Text('Add'),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
+  void _showEditProfileDialog(BuildContext context, ProfileProvider prov) {
+    final nameCtrl = TextEditingController(text: prov.profile.fullName);
+    final emailCtrl = TextEditingController(text: prov.profile.email);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit Profile'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameCtrl,
+              decoration: const InputDecoration(labelText: 'Full Name'),
             ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: emailCtrl,
+              decoration: const InputDecoration(labelText: 'Email Address'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (nameCtrl.text.trim().isNotEmpty && emailCtrl.text.trim().isNotEmpty) {
+                prov.saveProfile(prov.profile.copyWith(
+                  fullName: nameCtrl.text.trim(),
+                  email: emailCtrl.text.trim(),
+                ));
+                Navigator.pop(ctx);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryColor),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.backgroundLight,
+      body: SafeArea(
+        child: Consumer<ProfileProvider>(
+          builder: (context, profileProv, child) {
+            final profile = profileProv.profile;
+            return CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 18,
+                              backgroundImage: profile.avatarUrl != null ? NetworkImage(profile.avatarUrl!) : const NetworkImage('https://i.pravatar.cc/150?img=11'),
+                            ),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'NutriScan AI',
+                              style: TextStyle(
+                                color: AppTheme.primaryColor,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 22,
+                              ),
+                            ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.notifications_none_rounded, color: AppTheme.textDark),
+                          onPressed: () => context.push('/alerts'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Stack(
+                              children: [
+                                CircleAvatar(
+                                  radius: 40,
+                                  backgroundImage: profile.avatarUrl != null ? NetworkImage(profile.avatarUrl!) : const NetworkImage('https://i.pravatar.cc/150?img=32'),
+                                ),
+                                Positioned(
+                                  bottom: 0,
+                                  right: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primaryColor,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white, width: 2),
+                                    ),
+                                    child: const Icon(Icons.edit, color: Colors.white, size: 14),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    profile.fullName,
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.textDark,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    profile.email,
+                                    style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      if (profile.isPro)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: AppTheme.primaryLightest,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: const Text(
+                                            'Pro Member',
+                                            style: TextStyle(color: AppTheme.primaryColor, fontSize: 11, fontWeight: FontWeight.w700),
+                                          ),
+                                        ),
+                                      if (profile.isPro) const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade200,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          'Joined ${profile.joinDate}',
+                                          style: TextStyle(color: Colors.grey.shade700, fontSize: 11, fontWeight: FontWeight.w600),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: () => _showEditProfileDialog(context, profileProv),
+                            icon: const Icon(Icons.person_outline, size: 18),
+                            label: const Text('Edit Profile'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      // My Allergies
+                      _SectionContainer(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.warning_amber_rounded, color: AppTheme.dangerRed, size: 22),
+                                    const SizedBox(width: 8),
+                                    const Text('My Allergies', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textDark)),
+                                  ],
+                                ),
+                                TextButton(
+                                  onPressed: () {}, // Optional: Open full manager
+                                  style: TextButton.styleFrom(foregroundColor: AppTheme.primaryColor),
+                                  child: const Text('Manage', style: TextStyle(fontWeight: FontWeight.w700)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                ...profile.allergens.map((allergen) => _AllergyChip(
+                                  label: allergen, 
+                                  icon: Icons.grass_outlined,
+                                  onDelete: () => profileProv.toggleAllergen(allergen, false),
+                                )),
+                                InkWell(
+                                  onTap: () => _showAddAllergenDialog(context, profileProv),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.transparent,
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: Colors.grey.shade400, style: BorderStyle.solid),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.add, size: 16, color: Colors.grey.shade600),
+                                        const SizedBox(width: 6),
+                                        Text('Add New', style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            if (profile.allergens.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8),
+                                child: Text('No allergies added yet.', style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
+                              ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'NutriScan will automatically alert you when these ingredients are detected in your scans.',
+                              style: TextStyle(color: AppTheme.textMuted, fontSize: 13, height: 1.4),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Dietary Goals
+                      _SectionContainer(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Dietary Goals', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textDark)),
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryLightest,
+                                borderRadius: BorderRadius.circular(12),
+                                border: const Border(left: BorderSide(color: AppTheme.primaryColor, width: 4)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text('Current Focus', style: TextStyle(color: AppTheme.primaryColor, fontSize: 12)),
+                                      const SizedBox(height: 2),
+                                      Text(profile.dietaryPreferences.isNotEmpty ? profile.dietaryPreferences.first : 'Weight Loss', style: const TextStyle(color: AppTheme.primaryColor, fontSize: 15, fontWeight: FontWeight.w700)),
+                                    ],
+                                  ),
+                                  const Icon(Icons.trending_down, color: AppTheme.primaryColor),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            ...profile.dietaryPreferences.skip(1).map((pref) => _ListTileItem(title: pref, icon: Icons.star_border_outlined)).toList(),
+                            if (profile.dietaryPreferences.length <= 1)
+                              const _ListTileItem(title: 'High Protein', icon: Icons.fitness_center_outlined),
+                            if (profile.dietaryPreferences.length <= 2)
+                              const _ListTileItem(title: 'Low Carb', icon: Icons.energy_savings_leaf_outlined, showBorder: false),
+                          ],
+                        ),
+                      ),
+
+                      // Language
+                      _SectionContainer(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.language_outlined, color: AppTheme.textDark, size: 20),
+                                const SizedBox(width: 8),
+                                const Text('Language', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textDark)),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            const Row(
+                              children: [
+                                Expanded(child: _LanguageOption(label: 'English', isSelected: true)),
+                                SizedBox(width: 12),
+                                Expanded(child: _LanguageOption(label: 'हिन्दी (Hindi)')),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            const Row(
+                              children: [
+                                Expanded(child: _LanguageOption(label: 'বাংলা (Bengali)')),
+                                SizedBox(width: 12),
+                                Expanded(child: _LanguageOption(label: 'தமிழ் (Tamil)')),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton(
+                                onPressed: () {},
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppTheme.primaryColor,
+                                  side: const BorderSide(color: AppTheme.primaryLightest),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                ),
+                                child: const Text('Show All Indian Languages', style: TextStyle(fontWeight: FontWeight.w600)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // App Settings
+                      _SectionContainer(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('App Settings', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.textDark)),
+                            const SizedBox(height: 16),
+                            _SettingsTile(
+                              title: 'Push Notifications',
+                              subtitle: 'Scan reminders & health tips',
+                              icon: Icons.notifications_active_outlined,
+                              trailing: Switch(
+                                value: true,
+                                onChanged: (v) {},
+                                activeColor: Colors.white,
+                                activeTrackColor: AppTheme.primaryColor,
+                              ),
+                            ),
+                            const _SettingsTile(
+                              title: 'Data Privacy',
+                              subtitle: 'Manage how your data is used',
+                              icon: Icons.shield_outlined,
+                              trailing: Icon(Icons.chevron_right, color: Colors.grey),
+                            ),
+                            const _SettingsTile(
+                              title: 'Appearance',
+                              icon: Icons.dark_mode_outlined,
+                              trailing: Text('Light Mode', style: TextStyle(color: AppTheme.textDark, fontSize: 13, fontWeight: FontWeight.w600)),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            context.read<AuthProvider>().logout();
+                            context.go('/login');
+                          },
+                          icon: const Icon(Icons.logout, size: 20),
+                          label: const Text('Sign Out'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.dangerRed,
+                            side: const BorderSide(color: AppTheme.dangerLight),
+                            backgroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+                      Center(
+                        child: TextButton.icon(
+                          onPressed: () {},
+                          icon: const Icon(Icons.help_outline, color: AppTheme.textDark, size: 18),
+                          label: const Text('Help & Support', style: TextStyle(color: AppTheme.textDark, fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                    ]),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionContainer extends StatelessWidget {
+  final Widget child;
+
+  const _SectionContainer({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _AllergyChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback? onDelete;
+
+  const _AllergyChip({required this.label, required this.icon, this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.only(left: 16, right: 8, top: 4, bottom: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE8ECEB), // specific greyish green
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFF4A5568)),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(color: Color(0xFF4A5568), fontSize: 13, fontWeight: FontWeight.w500)),
+          const SizedBox(width: 4),
+          InkWell(
+            onTap: onDelete,
+            child: const Padding(
+              padding: EdgeInsets.all(4.0),
+              child: Icon(Icons.close, size: 14, color: Color(0xFF4A5568)),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+
+class _ListTileItem extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final bool showBorder;
+
+  const _ListTileItem({required this.title, required this.icon, this.showBorder = true});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        border: showBorder ? Border(bottom: BorderSide(color: Colors.grey.shade100)) : null,
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppTheme.textDark, size: 20),
+          const SizedBox(width: 12),
+          Text(title, style: const TextStyle(color: AppTheme.textDark, fontSize: 15, fontWeight: FontWeight.w500)),
+          const Spacer(),
+          const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+        ],
+      ),
+    );
+  }
+}
+
+class _LanguageOption extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+
+  const _LanguageOption({required this.label, this.isSelected = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+      decoration: BoxDecoration(
+        color: isSelected ? AppTheme.primaryColor : const Color(0xFFEEF2FE), // Light blue-grey
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : AppTheme.textDark,
+              fontSize: 13,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            ),
+          ),
+          if (isSelected) const Icon(Icons.check_circle_outline, color: Colors.white, size: 16),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsTile extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final IconData icon;
+  final Widget trailing;
+
+  const _SettingsTile({
+    required this.title,
+    this.subtitle,
+    required this.icon,
+    required this.trailing,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7F9FC),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: AppTheme.textDark, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: const TextStyle(color: AppTheme.textDark, fontSize: 15, fontWeight: FontWeight.w500)),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 2),
+                  Text(subtitle!, style: TextStyle(color: AppTheme.textMuted, fontSize: 11)),
+                ],
+              ],
+            ),
+          ),
+          trailing,
+        ],
       ),
     );
   }
