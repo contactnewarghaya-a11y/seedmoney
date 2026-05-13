@@ -135,11 +135,51 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             spacing: 8,
                             runSpacing: 8,
                             children: [
-                              _TrendingChip(label: 'E621 Monosodium Glutamate', isSelected: true),
-                              _TrendingChip(label: 'Turmeric Curcumin'),
-                              _TrendingChip(label: 'Aspartame'),
-                              _TrendingChip(label: 'E102 Tartrazine'),
-                              _TrendingChip(label: 'Sodium Benzoate'),
+                              _TrendingChip(
+                                label: 'E621 Monosodium Glutamate',
+                                isSelected: _searchQuery == 'E621',
+                                onTap: () {
+                                  _searchController.text = 'E621';
+                                  setState(() => _searchQuery = 'E621');
+                                  exploreProv.search('E621');
+                                },
+                              ),
+                              _TrendingChip(
+                                label: 'Turmeric Curcumin',
+                                isSelected: _searchQuery == 'Curcumin',
+                                onTap: () {
+                                  _searchController.text = 'Curcumin';
+                                  setState(() => _searchQuery = 'Curcumin');
+                                  exploreProv.search('Curcumin');
+                                },
+                              ),
+                              _TrendingChip(
+                                label: 'Aspartame',
+                                isSelected: _searchQuery == 'Aspartame',
+                                onTap: () {
+                                  _searchController.text = 'Aspartame';
+                                  setState(() => _searchQuery = 'Aspartame');
+                                  exploreProv.search('Aspartame');
+                                },
+                              ),
+                              _TrendingChip(
+                                label: 'E102 Tartrazine',
+                                isSelected: _searchQuery == 'Tartrazine',
+                                onTap: () {
+                                  _searchController.text = 'Tartrazine';
+                                  setState(() => _searchQuery = 'Tartrazine');
+                                  exploreProv.search('Tartrazine');
+                                },
+                              ),
+                              _TrendingChip(
+                                label: 'Sodium Benzoate',
+                                isSelected: _searchQuery == 'Benzoate',
+                                onTap: () {
+                                  _searchController.text = 'Benzoate';
+                                  setState(() => _searchQuery = 'Benzoate');
+                                  exploreProv.search('Benzoate');
+                                },
+                              ),
                             ],
                           ),
                           const SizedBox(height: 32),
@@ -153,6 +193,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             subtitle: 'International safety codes for food additives.',
                             tagText: '500+ Items',
                             imageUrl: 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&q=80&w=600',
+                            onTap: () {
+                              _searchController.text = 'E-NUMBER';
+                              setState(() => _searchQuery = 'E-NUMBER');
+                              exploreProv.search('E-NUMBER');
+                            },
                           ),
                           const SizedBox(height: 12),
                           _CategoryCard(
@@ -160,6 +205,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             subtitle: 'Pigments extracted from fruits, vegetables, and minerals.',
                             tagText: 'Plant Derived',
                             imageUrl: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?auto=format&fit=crop&q=80&w=600',
+                            onTap: () {
+                              _searchController.text = 'NATURAL';
+                              setState(() => _searchQuery = 'NATURAL');
+                              exploreProv.search('NATURAL');
+                            },
                           ),
                           const SizedBox(height: 12),
                           _CategoryCard(
@@ -168,6 +218,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             tagText: 'Shelf Life',
                             imageUrl: 'https://images.unsplash.com/photo-1615486511484-92e172e270b2?auto=format&fit=crop&q=80&w=600',
                             isTagGrey: true,
+                            onTap: () {
+                              _searchController.text = 'PRESERVATIVE';
+                              setState(() => _searchQuery = 'PRESERVATIVE');
+                              exploreProv.search('PRESERVATIVE');
+                            },
                           ),
                           const SizedBox(height: 32),
                         ],
@@ -246,24 +301,28 @@ class _ExploreScreenState extends State<ExploreScreen> {
 class _TrendingChip extends StatelessWidget {
   final String label;
   final bool isSelected;
+  final VoidCallback? onTap;
 
-  const _TrendingChip({required this.label, this.isSelected = false});
+  const _TrendingChip({required this.label, this.isSelected = false, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? AppTheme.primaryLightest : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isSelected ? Colors.transparent : Colors.grey.shade300),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: isSelected ? AppTheme.primaryColor : AppTheme.textDark,
-          fontSize: 12,
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primaryLightest : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? Colors.transparent : Colors.grey.shade300),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? AppTheme.primaryColor : AppTheme.textDark,
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          ),
         ),
       ),
     );
@@ -276,6 +335,7 @@ class _CategoryCard extends StatelessWidget {
   final String tagText;
   final String imageUrl;
   final bool isTagGrey;
+  final VoidCallback? onTap;
 
   const _CategoryCard({
     required this.title,
@@ -283,50 +343,43 @@ class _CategoryCard extends StatelessWidget {
     required this.tagText,
     required this.imageUrl,
     this.isTagGrey = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 140,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        image: DecorationImage(
-          image: NetworkImage(imageUrl),
-          fit: BoxFit.cover,
-          colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.5), BlendMode.darken),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 140,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          image: DecorationImage(
+            image: NetworkImage(imageUrl),
+            fit: BoxFit.cover,
+            colorFilter: ColorFilter.mode(Colors.black.withValues(alpha: 0.5), BlendMode.darken),
+          ),
         ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: isTagGrey ? Colors.grey.shade600.withValues(alpha: 0.8) : AppTheme.primaryColor.withValues(alpha: 0.9),
-                borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isTagGrey ? Colors.grey.shade600.withValues(alpha: 0.8) : AppTheme.primaryColor.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(tagText, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
               ),
-              child: Text(
-                tagText,
-                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+              const SizedBox(height: 8),
+              Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 4),
+              Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 12), maxLines: 2, overflow: TextOverflow.ellipsis),
+            ],
+          ),
         ),
       ),
     );
