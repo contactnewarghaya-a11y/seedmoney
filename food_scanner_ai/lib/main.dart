@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/theme/app_theme.dart';
@@ -9,7 +10,21 @@ import 'providers/history_provider.dart';
 import 'providers/explore_provider.dart';
 import 'providers/alert_provider.dart';
 
+/// Bypasses SSL certificate errors on the Android emulator.
+/// Safe for debug/development — do NOT use in production builds.
+class _DevHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
+}
+
 void main() {
+  // Fix: HandshakeException on Android emulator due to outdated SSL certs
+  HttpOverrides.global = _DevHttpOverrides();
+
   runApp(
     MultiProvider(
       providers: [
