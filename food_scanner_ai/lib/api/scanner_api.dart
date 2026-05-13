@@ -1,10 +1,10 @@
 import 'package:dio/dio.dart';
 
 class ScannerApi {
-  // Live Cloud Backend on Render.com
+  // Local emulator backend
   final Dio dio = Dio(
     BaseOptions(
-      baseUrl: 'https://seedmoney-7z7x.onrender.com/api', 
+      baseUrl: 'http://10.0.2.2:8080/api', 
       connectTimeout: const Duration(seconds: 30),
       receiveTimeout: const Duration(seconds: 30),
     ),
@@ -27,10 +27,10 @@ class ScannerApi {
     }
   }
 
-  /// Phase 8: Spring Boot GLM API Mock
+  /// Phase 8: Spring Boot GLM API
   Future<Map<String, dynamic>> analyzeIngredients(List<String> ingredients, String rawText) async {
     try {
-      // Hit the Spring Boot Backend!
+      // Hit the local Spring Boot Backend!
       final response = await dio.post('/analyze', data: {
         "ingredients": ingredients,
         "rawText": rawText,

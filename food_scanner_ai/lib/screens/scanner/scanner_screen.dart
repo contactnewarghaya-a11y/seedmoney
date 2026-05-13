@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../providers/scan_provider.dart';
+import '../../providers/history_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/image_service.dart';
 
@@ -58,7 +59,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
     try {
       final XFile image = await _controller!.takePicture();
       if (!mounted) return;
-      final success = await context.read<ScanProvider>().processImage(image.path);
+      final historyProv = context.read<HistoryProvider>();
+      final success = await context.read<ScanProvider>().processImage(image.path, historyProvider: historyProv);
       if (success && mounted) context.go('/result');
     } catch (e) {
       debugPrint("Capture error: $e");
@@ -69,7 +71,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
     final imageService = ImageService();
     final image = await imageService.pickImageFromGallery();
     if (image != null && mounted) {
-      final success = await context.read<ScanProvider>().processImage(image.path);
+      final historyProv = context.read<HistoryProvider>();
+      final success = await context.read<ScanProvider>().processImage(image.path, historyProvider: historyProv);
       if (success && mounted) context.go('/result');
     }
   }

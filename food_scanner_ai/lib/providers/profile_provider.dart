@@ -22,20 +22,34 @@ class ProfileProvider with ChangeNotifier {
     final apiProfile = await _api.getProfile();
     if (apiProfile != null) {
       _profile = apiProfile;
+      // Also cache to local storage
+      await _cacheLocally(prefs, apiProfile);
     } else {
       // Fallback to local storage
-      final allergens = prefs.getStringList('profile_allergens') ?? [];
-      final conditions = prefs.getStringList('profile_conditions') ?? [];
-      final dietary = prefs.getStringList('profile_dietary') ?? [];
-
       _profile = UserProfile(
-        allergens: allergens,
-        conditions: conditions,
-        dietaryPreferences: dietary,
+        fullName: prefs.getString('profile_fullName') ?? 'Arjun Sharma',
+        email: prefs.getString('profile_email') ?? 'arjun.sharma@example.com',
+        avatarUrl: prefs.getString('profile_avatarUrl'),
+        isPro: prefs.getBool('profile_isPro') ?? true,
+        joinDate: prefs.getString('profile_joinDate') ?? 'May 2023',
+        allergens: prefs.getStringList('profile_allergens') ?? [],
+        conditions: prefs.getStringList('profile_conditions') ?? [],
+        dietaryPreferences: prefs.getStringList('profile_dietary') ?? [],
       );
     }
     _isLoading = false;
     notifyListeners();
+  }
+
+  Future<void> _cacheLocally(SharedPreferences prefs, UserProfile p) async {
+    await prefs.setString('profile_fullName', p.fullName);
+    await prefs.setString('profile_email', p.email);
+    if (p.avatarUrl != null) await prefs.setString('profile_avatarUrl', p.avatarUrl!);
+    await prefs.setBool('profile_isPro', p.isPro);
+    await prefs.setString('profile_joinDate', p.joinDate);
+    await prefs.setStringList('profile_allergens', p.allergens);
+    await prefs.setStringList('profile_conditions', p.conditions);
+    await prefs.setStringList('profile_dietary', p.dietaryPreferences);
   }
 
   Future<void> saveProfile(UserProfile newProfile) async {
@@ -43,9 +57,7 @@ class ProfileProvider with ChangeNotifier {
     notifyListeners();
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('profile_allergens', newProfile.allergens);
-    await prefs.setStringList('profile_conditions', newProfile.conditions);
-    await prefs.setStringList('profile_dietary', newProfile.dietaryPreferences);
+    await _cacheLocally(prefs, newProfile);
 
     // Sync to backend
     await _api.updateProfile(newProfile);

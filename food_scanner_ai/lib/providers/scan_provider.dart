@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import '../services/image_service.dart';
 import '../api/scanner_api.dart';
 import '../models/analysis_result.dart';
+import 'history_provider.dart';
 
 class ScanProvider with ChangeNotifier {
   final ImageService _imageService = ImageService();
@@ -15,7 +17,7 @@ class ScanProvider with ChangeNotifier {
   String? get base64Image => _base64Image;
   AnalysisResult? get lastResult => _lastResult;
 
-  Future<bool> processImage(String imagePath) async {
+  Future<bool> processImage(String imagePath, {HistoryProvider? historyProvider}) async {
     _isProcessing = true;
     _lastResult = null; // Clear previous
     notifyListeners();
@@ -35,6 +37,9 @@ class ScanProvider with ChangeNotifier {
 
         // 4. Store Result
         _lastResult = AnalysisResult.fromJson(aiResponse, _base64Image!, ingredients, rawText);
+        
+        // 5. Add to history so dashboard updates immediately
+        historyProvider?.addScan(_lastResult!);
         
         return true;
       }
